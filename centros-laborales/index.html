@@ -73,6 +73,14 @@
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- FilePond (drag & drop file input) -->
+    <link
+      href="https://unpkg.com/filepond/dist/filepond.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.min.js"></script>
+    <script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.min.js"></script>
   </head>
   <body class="bg-background-light text-[#0d121b] antialiased">
     <main class="max-w-4xl mx-auto p-6 md:p-12">
@@ -429,7 +437,7 @@
               >
               <textarea
                 name="desc"
-                rows="3"
+                rows="5"
                 class="mt-2 w-full pl-4 pr-3 py-3 rounded-lg border border-gray-200 bg-background-light/50 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               ></textarea>
             </div>
@@ -475,11 +483,18 @@
                 <span class="required-star">*</span></label
               >
               <textarea
+                id="actividades-input"
                 name="actividades"
                 rows="5"
                 required
                 class="mt-2 w-full pl-4 pr-3 py-3 rounded-lg border border-gray-200 bg-background-light/50 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               ></textarea>
+              <div
+                id="word-count"
+                class="text-xs text-right text-gray-500 mt-1"
+              >
+                0/300 palabras
+              </div>
             </div>
 
             <div class="md:col-span-2">
@@ -488,12 +503,16 @@
                 <span class="required-star">*</span></label
               >
               <input
+                id="constancia-input"
                 name="constancia"
                 type="file"
                 accept="application/pdf"
                 required
                 class="mt-2 w-full text-sm"
               />
+              <p class="text-xs text-gray-500 mt-1">
+                Tamaño máximo: 10 MB. Solo PDF.
+              </p>
             </div>
 
             <div class="md:col-span-2 note text-sm">
@@ -555,6 +574,7 @@
       // TEMPORAL: desactivar validación de correo para pruebas.
       // Recordar: ajustar a `false` o eliminar antes de pasar a producción.
       const SKIP_EMAIL_VALIDATION = true
+      const MIN_WORDS = 200
 
       const stepTitles = [
         { title: 'Estudiante', subtitle: 'Datos personales' },
@@ -725,6 +745,22 @@
               return el
             }
           } else if (!el.value || el.value.toString().trim() === '') return el
+        }
+
+        // Check word count on actividades (step 3 index 2)
+        if (index === 2) {
+          const textarea = fs.querySelector('textarea[name="actividades"]')
+          if (textarea) {
+            const words = textarea.value.trim().split(/\s+/).filter(Boolean)
+            if (words.length < MIN_WORDS) {
+              Swal.fire({
+                icon: 'warning',
+                title: 'Actividad muy corta',
+                text: `La descripción debe tener al menos ${MIN_WORDS} palabras.`,
+              })
+              return textarea
+            }
+          }
         }
 
         // Validación específica de correo neumann.education en el paso 0
@@ -1042,7 +1078,52 @@
         }
       })
 
+      function updateWordCount() {
+        const textarea = document.getElementById('actividades-input')
+        const counter = document.getElementById('word-count')
+        if (!textarea || !counter) return
+        const words = textarea.value.trim().split(/\s+/).filter(Boolean)
+        counter.textContent = `${words.length}/${MIN_WORDS} palabras`
+      }
+
+      const actividadesEl = document.getElementById('actividades-input')
+      if (actividadesEl) {
+        actividadesEl.addEventListener('input', updateWordCount)
+      }
+
+      // Initialize FilePond on the constancia input for drag-drop and validation
+      FilePond.registerPlugin(
+        FilePondPluginFileValidateType,
+        FilePondPluginFileValidateSize,
+      )
+      const pond = FilePond.create(
+        document.querySelector('#constancia-input'),
+        {
+          acceptedFileTypes: ['application/pdf'],
+          maxFileSize: '10MB',
+          labelIdle:
+            'Arrastra tu PDF o <span class="filepond--label-action">Examinar</span>',
+        },
+      )
+
+      // keep a fallback check just in case
+      const pondInput = document.querySelector('#constancia-input')
+      if (pondInput) {
+        pondInput.addEventListener('change', () => {
+          const file = pondInput.files[0]
+          if (file && file.size > 10 * 1024 * 1024) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Archivo demasiado grande',
+              text: 'El archivo PDF no debe superar los 10 MB.',
+            })
+            pond.removeFile()
+          }
+        })
+      }
+
       loadDraftOnStart()
+      updateWordCount()
       updateUI()
     </script>
   </body>

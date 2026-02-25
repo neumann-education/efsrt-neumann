@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EFSRT - Institución Educativa (Proyecto Social)</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="icon" type="image/png" href="icono.png" />
+
     <link
       href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&amp;display=swap"
       rel="stylesheet"
     />
-        <link rel="icon" type="image/png" href="icono.png">
-
     <script id="tailwind-config">
       tailwind.config = {
         darkMode: 'class',
@@ -403,7 +403,7 @@
             </div>
             <div class="md:col-span-2">
               <label class="text-sm font-semibold"
-                >Total de horas realizadas (mínimo 64)
+                >Total de horas realizadas
                 <span class="required-star">*</span></label
               >
               <input
@@ -528,8 +528,7 @@
               <p class="text-xs text-gray-500 mt-1">
                 Asegúrate de que el documento esté en formato PDF. El
                 certificado/constancia debe incluir el nombre del estudiante y
-                el total de horas (mínimo 64) tal como declaraste en el
-                formulario.
+                el total de horas si es posible.
               </p>
             </div>
           </div>
@@ -578,6 +577,10 @@
         const steps = Array.from(document.querySelectorAll('[data-step]'))
         const total = steps.length
         let current = 0
+
+        // TEMPORAL: desactivar validación de correo para pruebas. Recordar:
+        // ajustar a `false` o eliminar antes de pasar a producción.
+        const SKIP_EMAIL_VALIDATION = true
 
         const stepTitles = [
           { title: 'Estudiante', subtitle: 'Datos personales' },
@@ -715,34 +718,19 @@
               return el
             }
           }
-          if (index === 0) {
+          if (index === 0 && !SKIP_EMAIL_VALIDATION) {
             const emailInput = fs.querySelector(
               'input[name="correo_estudiantil"]',
             )
             if (emailInput && emailInput.value) {
-              const email = emailInput.value.trim()
-              if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+              const email = emailInput.value.trim().toLowerCase()
+              if (!email.endsWith('@neumann.global')) {
                 Swal.fire({
                   icon: 'warning',
                   title: 'Correo inválido',
-                  text: 'Ingresa un correo electrónico válido.',
+                  text: 'El correo estudiantil debe ser del dominio @neumann.global',
                 })
                 return emailInput
-              }
-            }
-          }
-          if (index === 2) {
-            const horasInput = fs.querySelector(
-              'input[name="horas_realizadas"]',
-            )
-            if (horasInput && horasInput.value) {
-              if (parseInt(horasInput.value) < 64) {
-                Swal.fire({
-                  icon: 'warning',
-                  title: 'Horas insuficientes',
-                  text: 'El total de horas realizadas debe ser mínimo 64.',
-                })
-                return horasInput
               }
             }
           }
@@ -873,20 +861,11 @@
                 current = i
                 updateUI()
                 inv.focus()
-                // show specific message if it's the hours field
-                if (inv.name === 'horas_realizadas') {
-                  Swal.fire({
-                    icon: 'warning',
-                    title: 'Horas insuficientes',
-                    text: 'El total de horas realizadas debe ser al menos 64.',
-                  })
-                } else {
-                  Swal.fire({
-                    icon: 'warning',
-                    title: 'Campos incompletos',
-                    text: 'Revisa las secciones marcadas y completa los campos obligatorios.',
-                  })
-                }
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'Campos incompletos',
+                  text: 'Revisa las secciones marcadas y completa los campos obligatorios.',
+                })
                 return
               }
             }
@@ -915,21 +894,6 @@
                   data[key] = value
                 }
 
-                // extra validation before envío
-                if (
-                  data.horas_realizadas &&
-                  parseInt(data.horas_realizadas, 10) < 64
-                ) {
-                  Swal.fire({
-                    icon: 'warning',
-                    title: 'Horas insuficientes',
-                    text: 'El total de horas debe ser al menos 64.',
-                  })
-                  submitBtn.disabled = false
-                  submitBtn.textContent = originalText
-                  return
-                }
-
                 const sendData = (payload) => {
                   const SCRIPT_URL =
                     'https://script.google.com/macros/s/AKfycbwBFz4efCzuyCj7BwjHHBiKYaPCbDnp4IgjlBuBfFa-DAxjHk-MfpXNhjMo9VWcWbCk/exec'
@@ -956,7 +920,7 @@
                         Swal.fire({
                           icon: 'success',
                           title: '¡Éxito!',
-                          text: 'Tu formulario ha sido enviado y registrado correctamente. (Demo)',
+                          text: 'Tu formulario ha sido enviado y registrado correctamente.',
                         })
                         form.reset()
                         clearDraft()

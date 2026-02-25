@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EFSRT — Emprendimiento e Iniciativas de Negocio</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="icon" type="image/png" href="icono.png" />
+
     <link
       href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&amp;display=swap"
       rel="stylesheet"
     />
-        <link rel="icon" type="image/png" href="icono.png">
     <script id="tailwind-config">
       tailwind.config = {
         darkMode: 'class',
@@ -523,7 +524,7 @@
                   o arrastra y suelta
                 </p>
                 <p id="file-name-display" class="text-xs text-gray-500 mt-1">
-                  PDF o Imagen hasta 10MB
+                  PDF hasta 10MB (debe incluir el nombre del estudiante)
                 </p>
               </div>
             </div>
@@ -575,8 +576,9 @@
         const total = steps.length
         let current = 0
 
-        // (no longer used) email domain restriction removed so cualquier correo válido es aceptado
-        // const SKIP_EMAIL_VALIDATION = true
+        // TEMPORAL: desactivar validación de correo para pruebas. Recordar:
+        // ajustar a `false` o eliminar antes de pasar a producción.
+        const SKIP_EMAIL_VALIDATION = true
 
         const stepTitles = [
           { title: 'Estudiante', subtitle: 'Datos personales' },
@@ -783,21 +785,17 @@
             }
           }
 
-          if (index === 0) {
+          if (index === 0 && !SKIP_EMAIL_VALIDATION) {
             const emailInput = fs.querySelector(
               'input[name="correo_estudiantil"]',
             )
             if (emailInput && emailInput.value) {
-              const email = emailInput.value.trim()
-              // just ensure the field contains a well-formed email; the
-              // `type=email` attribute already does basic validation, so
-              // no domain restriction is imposed here. This allows
-              // @neumann.education addresses (como el caso de erick.mamani)
-              if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+              const email = emailInput.value.trim().toLowerCase()
+              if (!email.endsWith('@neumann.global')) {
                 Swal.fire({
                   icon: 'warning',
                   title: 'Correo inválido',
-                  text: 'Ingresa un correo electrónico válido.',
+                  text: 'El correo estudiantil debe ser del dominio @neumann.global',
                 })
                 return emailInput
               }
@@ -1104,13 +1102,13 @@
                 if (e) e.required = true
               })
 
-              adjuntoWhat.textContent = 'evidencias (fotos)'
-              adjuntoInput.accept = 'image/*'
+              adjuntoWhat.textContent = 'Constancia / ficha RUC en PDF'
+              adjuntoInput.accept = 'application/pdf'
               adjuntoHelp.textContent =
-                'Se deberá adjuntar Ficha RUC y evidencia del emprendimiento (todo en una sola imagen ambas evidencias)'
+                'Se deberá adjuntar un PDF que contenga la ficha RUC o una constancia notariada. Tamaño máximo: 10 MB.'
               if (fileNameDisplay)
                 fileNameDisplay.textContent =
-                  'Imagen (RUC + Evidencia) hasta 10MB'
+                  'PDF con Nombre del estudiante hasta 10MB'
             }
           })
         }
@@ -1147,7 +1145,7 @@
                 Swal.fire({
                   icon: 'warning',
                   title: 'Archivo demasiado grande',
-                  text: 'El archivo no debe superar los 10 MB.',
+                  text: 'El archivo no debe superar los 10 MB.',
                 })
                 fileInput.value = ''
                 fileNameDisplay.textContent = 'PDF o Imagen hasta 10MB'
